@@ -83,7 +83,7 @@ public class Ball : MonoBehaviour {
 			_body.AddForce(force);
 			
 			isInPlay = true;
-			Game.inst.ClearMessages();
+			Game.s_Inst.ClearMessages();
 		}
 	}
 	
@@ -107,7 +107,7 @@ public class Ball : MonoBehaviour {
 		
 		// Did we hit the Top Wall?
 		if (col.collider.name == "WallTop") {
-			Game.inst.ShrinkPaddle();
+			Game.s_Inst.ShrinkPaddle();
 		}
 	}
 	
@@ -121,7 +121,7 @@ public class Ball : MonoBehaviour {
 		// So it is safe to assume the ball is lost.
 		if (isInPlay) {
 			isInPlay = false;
-			Game.inst.LoseBall();
+			Game.s_Inst.LoseBall();
 			Destroy(gameObject);
 		}
 	}

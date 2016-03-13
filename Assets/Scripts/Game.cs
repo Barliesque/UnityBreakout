@@ -1,6 +1,6 @@
 using UnityEngine;
 using System.Collections;
-using System.Linq;
+//using System.Linq;
 
 /// <summary>
 /// The Game class is the main class of the game, BREAKOUT!
@@ -11,78 +11,85 @@ public class Game : MonoBehaviour {
 	//  EDITOR PROPERTIES
 	//----------------------------
 	
+	/// The brick row prefabs, in the order they will be used to build the game board, from top to bottom
 	public GameObject[] rowPrefab;
+
+	/// A reference to the fireworks effect in the scene
 	public GameObject Fireworks;
 	
-	//----------------------------
-	//  FIELDS
-	//----------------------------
-	
 	/// Global access to singleton instance
-	public static Game inst = null;
-	
-	/// The player's paddle
-	Paddle paddle;
-	
-	/// The number of rows of bricks still active in the game
-	int rowCount;
-	
-	/// The number of balls the player has, including the one in play
-	int ballsLeft;
-	
-	/// Label displaying how many balls the player still has
-	UILabel uiBallsLeft;
+	public static Game s_Inst = null;
+
+	/// Rows of bricks will be contained by this transform
+	public Transform m_BricksContainer;
 
 	/// How many balls does the player start with?
-	const int BALLS_PER_GAME = 3;
-	
-	/// The player's current score
-	int score;
+	public int m_BallsPerGame = 3;
+
+	/// The player's paddle
+	public Paddle m_Paddle;
+
+	/// UI Panel in the upper left corner of the screen
+	public Transform m_UpperLeftPanel;
+
+	/// UI Panel in the upper right corner of the screen
+	public Transform m_UpperRightPanel;
+
+	/// Label displaying how many balls the player still has
+	public UILabel m_BallsLeftUI;
 	
 	/// Label displaying the player's score
-	UILabel uiScore;
-	
-	/// The current level
-	int level;
-	
+	public UILabel m_ScoreUI;
+
 	/// Label displaying the current level
-	UILabel uiLevel;
-	
-	/// The current hiscore, which is saved to PlayerPrefs with the key: "hiscore"
-	int hiscore;
-	
+	public UILabel m_LevelUI;
+
 	/// Label displaying the current hiscore
-	UILabel uiHiScore;
-	
+	public UILabel m_HiScoreUI;
+
 	/// The initial "PLAY" button shown when the application starts
-	GameObject goPlayButton;
-	
+	public GameObject m_PlayButton;
+
 	/// The "PLAY AGAIN" button shown with the Game Over message
-	GameObject goPlayAgainButton;
-	
+	public GameObject m_PlayAgainButton;
+
 	/// A welcome message: "BREAKOUT!" and the "PLAY" button
-	GameObject goBegin;
-	
+	public GameObject m_BeginMessage;
+
 	/// GameObject containing the "GAME OVER" message and the "PLAY AGAIN" button
-	GameObject goGameOver;
-	
+	public GameObject m_GameOverMessage;
+
 	/// Text to explain what keys to use to play the game
-	GameObject goInstructions;
-	
+	public GameObject m_Instructions;
+
 	/// Text at center of screen to announce the next level
-	GameObject goLevelAnnounce;
+	public GameObject m_LevelAnnounce;
+
+
+	//----------------------------
+	//  PRIVATE FIELDS
+	//----------------------------
+
+	/// The number of rows of bricks still active in the game
+	int _rowCount;
+
+	/// The number of balls the player has, including the one in play
+	int _ballsLeft;
+
+	/// The player's current score
+	int _score;
+
+	/// The score currently displayed, different only while adding points up to the actual current score
+	int _scoreDisplayed;
+
+	/// The current hiscore, which is saved to PlayerPrefs with the key: "hiscore"
+	int _hiscore;
+
+	/// The current level
+	int _level;
 	
 	/// True, until the game is over
 	bool isInPlay = false;
-	
-	
-	
-	//----------------------------
-	//  CONSTRUCTOR
-	//----------------------------
-	public Game() : base() {
-		
-	}
 	
 	
 	//----------------------------------------------------
@@ -92,60 +99,42 @@ public class Game : MonoBehaviour {
 	/// </summary>
 	void Awake () {
 		// Enforce singleton...
-		if (inst != null) {
-			Destroy(inst.gameObject);
+		if (s_Inst != null) {
+			Destroy(s_Inst.gameObject);
 			Debug.Log ("Duplicate Game instance destroyed!");
 		}
-		inst = this;
+		s_Inst = this;
 		
 		// Make an interpolator value, based on the aspect ratio of the game area...
 		// 0.0 = Aspect 3:2 (or narrower)
 		// 1.0 = Aspect 16:9 (or wider)
-		var camera = GameObject.Find("Game Camera").GetComponent<Camera>();
-		var aspect = (camera.aspect - 1.5f) / 0.2777778f;
+		var aspect = (Camera.main.aspect - 1.5f) / 0.2777778f;
 		
 		// Use the aspect ratio to position the score panels
-		var go = GameObject.Find("UpperLeft");
-		var pos = go.transform.localPosition;
-		go.transform.localPosition = new Vector3(Mathf.Lerp(0f,-100f,aspect), pos.y, pos.z);
-		go = GameObject.Find("UpperRight");
-		pos = go.transform.localPosition;
-		go.transform.localPosition = new Vector3(Mathf.Lerp(374f,460f,aspect), pos.y, pos.z);
+		var pos = m_UpperLeftPanel.localPosition;
+		m_UpperLeftPanel.localPosition = new Vector3(Mathf.Lerp(0f, -100f, aspect), pos.y, pos.z);
+		pos = m_UpperRightPanel.localPosition;
+		m_UpperRightPanel.localPosition = new Vector3(Mathf.Lerp(374f, 460f, aspect), pos.y, pos.z);
 		
 		// Find the player's paddle, which will never be destroyed
-		paddle = MonoBehaviour.FindObjectOfType<Paddle>();
-		
-		// Find the various score keeping labels
-		uiBallsLeft = GetLabel("BallsLeft");
-		uiScore = GetLabel("Score");
-		uiHiScore = GetLabel("HiScore");
-		uiLevel = GetLabel("Level");
-		
-		// New Level Announcement - Hide it for now
-		goLevelAnnounce = GameObject.Find("LevelAnnounce");
-		goLevelAnnounce.SetActive(false);
-		
-		// BREAKOUT! and PLAY button
-		goBegin = GameObject.Find("GameBegin");
-		goPlayButton = GameObject.Find("PlayButton");
-		UIEventListener.Get (goPlayButton).onClick += StartGame;
-		
-		// The PLAY AGAIN button
-		goPlayAgainButton = GameObject.Find("PlayAgainButton");
-		UIEventListener.Get (goPlayAgainButton).onClick += PlayAgain;
-		
-		// GAME OVER message - Hide for now
-		goGameOver = GameObject.Find("GameOver");
-		goGameOver.SetActive(false);
-		
-		// Instruction text - Hide for now
-		goInstructions = GameObject.Find("Instructions");
-		goInstructions.SetActive(false);
-		
+		m_Paddle = MonoBehaviour.FindObjectOfType<Paddle>();
+
+		// Show BREAKOUT! and Play Button, and hide all other messages and buttons
+		m_BeginMessage.SetActive(true);
+		m_PlayButton.SetActive(true);
+		m_LevelAnnounce.SetActive(false);
+		m_GameOverMessage.SetActive(false);
+		m_PlayAgainButton.SetActive(false);
+		m_Instructions.SetActive(false);
+
+		// Init the PLAY buttons
+		UIEventListener.Get (m_PlayAgainButton).onClick += PlayAgain;
+		UIEventListener.Get(m_PlayButton).onClick += StartGame;
+
 		// Check for a saved hiscore
 		if (PlayerPrefs.HasKey("hiscore")) {
-			hiscore = PlayerPrefs.GetInt("hiscore");
-			UpdateHiScore();
+			_hiscore = PlayerPrefs.GetInt("hiscore");
+			m_HiScoreUI.text = _hiscore.ToString("D6");
 		}
 		
 		// Build some bricks
@@ -161,15 +150,16 @@ public class Game : MonoBehaviour {
 	void StartGame(GameObject go = null)
 	{
 		// Hide welcome message, and show instructions (which will be hidden by ClearMessages if this is not the first game)
-		goBegin.SetActive(false);
-		goInstructions.SetActive(true);
-		
+		m_BeginMessage.SetActive(false);
+		m_PlayButton.SetActive(false);
+		m_Instructions.SetActive(true);
+
 		// Set up the game
-		SetBallsLeft(BALLS_PER_GAME);
-		score = 0;
-		UpdateScore();
-		paddle.Size = Paddle.DEFAULT_SIZE;
-		paddle.NewBall();
+		SetBallsLeft(m_BallsPerGame);
+		_score = 0;
+		_scoreDisplayed = -1;  // This will trigger the score to be updated on screen in Update()
+		m_Paddle.Size = Paddle.DEFAULT_SIZE;
+		m_Paddle.NewBall();
 		Ball.velocity = Ball.INIT_VELOCITY;
 		BuildLevel(1);
 	}
@@ -179,8 +169,9 @@ public class Game : MonoBehaviour {
 	/// </summary>
 	public void ClearMessages()
 	{
-		goGameOver.SetActive(false);
-		goInstructions.SetActive(false);
+		m_GameOverMessage.SetActive(false);
+		m_PlayAgainButton.SetActive(false);
+		m_Instructions.SetActive(false);
 		isInPlay = true;
 	}
 	
@@ -203,57 +194,60 @@ public class Game : MonoBehaviour {
 	void BuildLevel(int level = 1)
 	{
 		// Update the level number
-		this.level = level;
-		uiLevel.text = "<" + level + ">";
+		this._level = level;
+		m_LevelUI.text = "<" + level + ">";
 		
 		if (level == 1) {
 			// It's Level 1, so just get on with it
-			BuildBricks();
+			StartCoroutine(BuildBricks());
 		} else {
 			// Show level up animation
-			var label = goLevelAnnounce.GetComponent<UILabel>();
+			var label = m_LevelAnnounce.GetComponent<UILabel>();
 			label.text = "< LEVEL " + level + " >";
-			var tween = goLevelAnnounce.GetComponent<TweenScale>();
+			var tween = m_LevelAnnounce.GetComponent<TweenScale>();
 			tween.Reset();
 			tween.Play(true);
-			goLevelAnnounce.SetActive(true);
+			m_LevelAnnounce.SetActive(true);
 			
 			// Fireworks!
 			Instantiate(Fireworks);
-			
+
 			// Wait a moment before building bricks
-			Invoke("BuildBricks", 2.5f);
+			StartCoroutine(BuildBricks(2.5f));
 		}
 	}
 	
 	/// <summary>
 	/// Builds the bricks.
 	/// </summary>
-	void BuildBricks()
+	IEnumerator BuildBricks(float delay = 0f)
 	{
+		if (delay > 0f)
+			yield return new WaitForSeconds(delay);
+
 		// Remove any pre-existing bricks
-		var bricks = GameObject.Find("Bricks").transform;
-		foreach (var row in bricks.GetComponentsInChildren<BrickRow>()) {
-			Destroy(row.gameObject);
+		BrickRow[] rows = m_BricksContainer.GetComponentsInChildren<BrickRow>();
+        for (int i = 0; i < rows.Length; i++) {
+			Destroy(rows[i].gameObject);
 		}
 		
 		// If necessary, re-connect ball to the paddle (so it doesn't get bricks built on top of it!)
 		var ball = GameObject.FindObjectOfType<Ball>();
 		if (ball != null && ball.isInPlay) {
 			ball.isInPlay = false;
-			ball.transform.parent = paddle.gameObject.transform;
+			ball.transform.parent = m_Paddle.gameObject.transform;
 			ball.transform.localPosition = new Vector3(0f, 1f, 0f);
 			ball.body.isKinematic = true;
 		}
 		
 		// Build rows of bricks, as specified in the editor property:  rowPrefab[]
-		const float ROW_SCALE = 1.5f;
-		rowCount = rowPrefab.Length;
-		for (int i = 0; i < rowCount; i++) {
-			var row = Instantiate(rowPrefab[i], new Vector3(0f, bricks.position.y - i * ROW_SCALE, 0f), Quaternion.identity) as GameObject;
-			row.transform.localScale = new Vector3(1f, ROW_SCALE, 1f);
-			row.transform.parent = bricks;
-		}
+		_rowCount = rowPrefab.Length;
+		float wallHeight = 0f;
+		for (int i = 0; i < _rowCount; i++) {
+			var row = Instantiate(rowPrefab[i], new Vector3(0f, m_BricksContainer.position.y - wallHeight, 0f), Quaternion.identity) as GameObject;
+			row.transform.parent = m_BricksContainer;
+			wallHeight += row.GetComponent<BrickRow>().RowHeight;
+        }
 	}
 
 	/// <summary>
@@ -262,11 +256,11 @@ public class Game : MonoBehaviour {
 	public void RowDestroyed ()
 	{
 		// Is that *all* the bricks?
-		if (--rowCount == 0) {
+		if (--_rowCount == 0) {
 			// Make sure a game is in progress, ie. this is not a result of the Drop effect when a game is over
 			if (isInPlay) {
 				// Level Up!
-				BuildLevel(++level);
+				BuildLevel(++_level);
 			}
 		}
 	}
@@ -279,12 +273,12 @@ public class Game : MonoBehaviour {
 	public void LoseBall()
 	{
 		// Update the counter
-		SetBallsLeft(--ballsLeft);
+		SetBallsLeft(--_ballsLeft);
 		
-		if (ballsLeft == 0) {
+		if (_ballsLeft == 0) {
 			GameOver();
 		} else {
-			paddle.NewBall();
+			m_Paddle.NewBall();
 		}
 	}
 	
@@ -294,9 +288,9 @@ public class Game : MonoBehaviour {
 	/// <param name="balls">Balls.</param>
 	void SetBallsLeft(int balls)
 	{
-		ballsLeft = balls;
+		_ballsLeft = balls;
 		// Update the display counter
-		uiBallsLeft.text = repeat("*", balls);
+		m_BallsLeftUI.text = new string('*', balls);
 	}
 	
 	/// <summary>
@@ -305,26 +299,29 @@ public class Game : MonoBehaviour {
 	void GameOver ()
 	{
 		// Show GAME OVER message
-		goGameOver.SetActive(true);
-		goPlayAgainButton.gameObject.SetActive(false);
+		m_GameOverMessage.SetActive(true);
+		m_PlayAgainButton.gameObject.SetActive(false);
 		isInPlay = false;
 		
 		// Drop all the bricks off the screen!
 		Physics.gravity = new Vector3(0f, -10f, 0f);
-		foreach (var brick in GameObject.FindObjectsOfType<Brick>()) {
-			brick.Drop();
+
+		var bricks = m_BricksContainer.GetComponentsInChildren<Brick>();
+		for (int i = 0; i < bricks.Length; i++) {
+			bricks[i].Drop();
 		}
-		
-		// Wait a moment before showing PLAY AGAIN button
-		Invoke("ShowPlayAgain", 3f);
+
+		// Show PLAY AGAIN button (after a short delay)
+		StartCoroutine(ShowPlayAgain());
 	}
 	
 	/// <summary>
-	/// Show "PLAY AGAIN" button
+	/// Show "PLAY AGAIN" button after a short delay
 	/// </summary>
-	void ShowPlayAgain()
+	IEnumerator ShowPlayAgain()
 	{
-		goPlayAgainButton.SetActive(true);
+		yield return new WaitForSeconds(3);
+		m_PlayAgainButton.SetActive(true);
 	}
 	
 	//----------------------------------------------------
@@ -335,7 +332,7 @@ public class Game : MonoBehaviour {
 	/// </summary>
 	public void ShrinkPaddle()
 	{
-		paddle.Shrink();
+		m_Paddle.Shrink();
 	}	
 	
 	//----------------------------------------------------
@@ -346,31 +343,14 @@ public class Game : MonoBehaviour {
 	/// <param name="points">Points.</param>
 	public void AddToScore(int points)
 	{
-		//TODO: Tween the score up!
-		score += points;
-		UpdateScore();
-	}
-	
-	/// <summary>
-	/// Update the score label
-	/// </summary>
-	void UpdateScore()
-	{
-		var leading = 6 - score.ToString().Length;
-		uiScore.text = repeat("0", leading) + score;
-		
-		//TODO: Make it more eventful when beating the hiscore.  Consider waiting until the game is over to announce.
-		UpdateHiScore();
-	}
-	
-	/// <summary>
-	/// Update the hiscore if it's been beaten
-	/// </summary>
-	void UpdateHiScore()
-	{
-		if (score > hiscore) hiscore = score;
-		var leading = 6 - hiscore.ToString().Length;
-		uiHiScore.text = repeat("0", leading) + hiscore;
+		_score += points;
+
+		// Update the hiscore if it's been beaten
+		if (_score > _hiscore) {
+			_hiscore = _score;
+			m_HiScoreUI.text = _hiscore.ToString("D6");
+			//TODO: Make it more eventful when beating the hiscore.  Consider waiting until the game is over to announce.
+		}
 	}
 	
 	//----------------------------------------------------
@@ -385,21 +365,23 @@ public class Game : MonoBehaviour {
 		return GameObject.Find(name).GetComponent<UILabel>();
 	}
 	
-	/// <summary>
-	/// Returns a string that repeats a given string by a specified count
-	/// </summary>
-	/// <param name="s">The string to repeat</param>
-	/// <param name="count">How many times to repeat</param>
-	string repeat(string s, int count)
-	{
-		return string.Join ("", Enumerable.Repeat(s, count).ToArray());
-	}
-	
 	//----------------------------------------------------
 	
 	
 	void Update()
 	{
+		if (_score != _scoreDisplayed) {
+			if (_score < _scoreDisplayed) {
+				// Only when the score is reset will it be less than what's currently displayed.
+				// In this case, update the display immediately.
+				_scoreDisplayed = _score;
+			} else {
+				// Animate the value displayed until it matches the current score
+				++_scoreDisplayed;
+			}
+			m_ScoreUI.text = _scoreDisplayed.ToString("D6");
+		}
+
 		// Allow ESC to close the application
 		if (Input.GetKeyDown(KeyCode.Escape)) Application.Quit();
 		
@@ -421,7 +403,7 @@ public class Game : MonoBehaviour {
 	/// </summary>
 	void OnApplicationQuit()
 	{
-		PlayerPrefs.SetInt("hiscore", hiscore);
+		PlayerPrefs.SetInt("hiscore", _hiscore);
 		PlayerPrefs.Save();
 	}
 	

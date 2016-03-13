@@ -10,7 +10,10 @@ public class BrickRow : MonoBehaviour {
 	//----------------------------
 	//  EDITOR PROPERTIES
 	//----------------------------
-	
+
+	// Height of the bricks in this row.  Used by Game.cs to assemble wall of bricks.  Use a value larger than the height of the bricks to create a gap below this row.
+	public float RowHeight = 1.5f;
+
 	// Ball speed increase, when this row is completed
 	public float ballSpeedIncrease = 4.0f;
 	
@@ -47,7 +50,7 @@ public class BrickRow : MonoBehaviour {
 			Destroy(gameObject);
 			
 			// Inform the Game that this row has been destroyed
-			Game.inst.RowDestroyed();
+			Game.s_Inst.RowDestroyed();
 		}
 	}
 	

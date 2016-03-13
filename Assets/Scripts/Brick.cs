@@ -75,7 +75,7 @@ public class Brick : MonoBehaviour {
 			}
 			var row = GetComponentInParent<BrickRow>();
 			row.BrickDestroyed();
-			Game.inst.AddToScore(Points);
+			Game.s_Inst.AddToScore(Points);
 			Destroy(gameObject);
 		}
 	}
