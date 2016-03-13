@@ -2,7 +2,7 @@
 
 //----------------------------------------------
 //            NGUI: Next-Gen UI kit
-// Copyright © 2011-2013 Tasharen Entertainment
+// Copyright Â© 2011-2013 Tasharen Entertainment
 //----------------------------------------------
 
 using UnityEngine;
@@ -66,7 +66,7 @@ public class UIImageButtonInspector : Editor
 		mButton.normalSprite = spriteName;
 		mSprite.spriteName = spriteName;
 		mSprite.MakePixelPerfect();
-		if (mButton.collider == null || (mButton.collider is BoxCollider)) NGUITools.AddWidgetCollider(mButton.gameObject);
+		if (mButton.GetComponent<Collider>() == null || (mButton.GetComponent<Collider>() is BoxCollider)) NGUITools.AddWidgetCollider(mButton.gameObject);
 		Repaint();
 	}
 

@@ -1,6 +1,6 @@
 //----------------------------------------------
 //            NGUI: Next-Gen UI kit
-// Copyright © 2011-2013 Tasharen Entertainment
+// Copyright Â© 2011-2013 Tasharen Entertainment
 //----------------------------------------------
 
 //#pragma warning disable 618
@@ -313,7 +313,7 @@ public class UICamera : MonoBehaviour
 	/// Caching is always preferable for performance.
 	/// </summary>
 
-	public Camera cachedCamera { get { if (mCam == null) mCam = camera; return mCam; } }
+	public Camera cachedCamera { get { if (mCam == null) mCam = GetComponent<Camera>(); return mCam; } }
 
 	/// <summary>
 	/// Set to 'true' just before OnDrag-related events are sent (this includes OnPress events that resulted from dragging).
